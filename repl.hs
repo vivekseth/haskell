@@ -19,7 +19,7 @@ set_arr list index elem
 
 repl_eval :: [Int] -> String -> [Int]
 repl_eval lst cmd  
-    | ((length cmd) >= 3) = ((\x -> (set_arr lst (x !! 0) (x !! 1))) (map (\x -> read x :: Int) (splitOn "," cmd)))
+    | ((length cmd) >= 3) && (elem ',' cmd) = ((\x -> (set_arr lst (x !! 0) (x !! 1))) (map (\x -> read x :: Int) (splitOn "," cmd)))
     | cmd == "r" = (init_arr 5)
     | otherwise = lst
 

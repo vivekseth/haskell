@@ -1,6 +1,8 @@
 import Network.HTTP
 import System.Environment
 import Text.HTML.TagSoup
+import Text.StringLike
+import Data.List
 
 getArgIndex :: Int -> IO String
 getArgIndex i = do
@@ -19,25 +21,53 @@ appendLineNumber i str = (show i) ++ ". " ++ str
 
 (!=) a b = not (a == b)
 
-hasPrefix (a:a_tail) (b:b_tail) 
-    | (a:a_tail) == [] = True
-    | (a:a_tail) != [] && (b:b_tail) == [] = False
-    | a_tail == [] = (a == b)
-    | a_tail != [] && b_tail == [] = False
-    | otherwise = (a == b) && (hasPrefix a_tail b_tail)
+isTagType tagName = (flip (~==) $ "<" ++ tagName ++ ">")
 
-isTagType a = (flip (~==) $ "<" ++ a ++ ">")
+tagHasAttributeValue :: String -> String -> Tag String -> Bool
+tagHasAttributeValue a v tag  = isInfixOf v $ fromAttrib a tag
 
-linksFromTags tags = (filter $ hasPrefix "http" ) . (map $ fromAttrib "href") . (filter $ isTagType "a") $ tags
+-- http://www.imdb.com/name/nm0000358/?ref_=tt_ov_st
+-- <span class="itemprop" itemprop="name">Daniel Day-Lewis</span>
+
+getTagName :: StringLike str => Tag str -> str
+getTagName (TagOpen s _) = s
+getTagName (TagClose s) = s
+getTagName (TagText s) = s
+getTagName (TagComment s) = s
+getTagName (TagWarning s) = s
+
+--tagSubtree :: StringLike str => [Tag str] -> Tag str -> [Tag str]
+--tagSubtree tags parentTag = do
+--    let tagsStartingWithParent = dropWhile ((!=) parentTag) tags
+--    let tagsEndingWithSubTree = takeWhile 
+
+--    (\tag -> (tag != actorSpanTag)) tags )
+    
+-- map (\actorSpanTag -> (takeWhile (\tag -> not $ isTagCloseName "span" tag) $ dropWhile (\tag -> (tag != actorSpanTag)) tags )) $ actorSpanTagList
+
+
+filterTags tags = do
+    let actorSpanTagList = (filter $ tagHasAttributeValue "itemprop" "name") . (filter $ tagHasAttributeValue "class" "itemprop") . (filter $ isTagType "span") $ tags
+    let actorNameTagListList = map (\actorSpanTag -> (takeWhile (\tag -> not $ isTagCloseName "span" tag) $ dropWhile (\tag -> (tag != actorSpanTag)) tags )) $ actorSpanTagList
+    map innerText actorNameTagListList
 
 putNumberedLines arr = (putStrLn . unlines . (mapi appendLineNumber 1)) arr
 
 main_do = do
     url <- getArgIndex 0
     tags <- fmap parseTags $ httpGetRequestByURL url
-    putNumberedLines $ linksFromTags tags
+    putNumberedLines $ filterTags tags
 
 main = main_do
+
+
+
+
+
+
+
+
+
 
 {-
 
